@@ -1,79 +1,84 @@
-// src/components/Dashboard.jsx
-
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase'; // Importamos la base de datos
+import { auth, db } from '../firebase'; // Asegúrate que la ruta a tu config de firebase sea correcta
 import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
-// Importamos los paneles de control específicos para cada rol
+// Importa los paneles para cada rol
 import AdminDashboard from './roles/AdminDashboard';
 import ProfesorDashboard from './roles/ProfesorDashboard';
 import DefaultDashboard from './roles/DefaultDashboard';
 
-function Dashboard({ user, onLogout }) {
-  const [userRole, setUserRole] = useState(null);
-  const [loadingRole, setLoadingRole] = useState(true);
+const Dashboard = () => {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Este efecto se ejecuta cuando el usuario inicia sesión para obtener su rol
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Creamos una referencia al documento del usuario en la colección 'users'
+        // CORRECCIÓN: Cambiamos 'usuarios' por 'users' para que coincida con tu Firestore.
         const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-          // Si el documento existe, obtenemos el rol
-          setUserRole(userDocSnap.data().role);
-        } else {
-          // Si el documento no existe en Firestore, le asignamos un rol por defecto o nulo
-          console.log("No se encontró un rol para este usuario.");
-          setUserRole('default'); 
+        try {
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserData({ uid: user.uid, ...userDocSnap.data() });
+          } else {
+            console.error("Error: No se encontró el documento para el usuario en Firestore.");
+            setUserData(null); // Asegura que no haya datos de un usuario anterior
+          }
+        } catch (error) {
+            console.error("Error al obtener datos de Firestore:", error);
+            // Este error es probablemente por las reglas de seguridad.
         }
-        setLoadingRole(false);
+      } else {
+        console.log("No hay usuario autenticado.");
       }
-    };
+      setLoading(false);
+    });
 
-    fetchUserRole();
-  }, [user]); // Se ejecuta cada vez que el objeto 'user' cambia
+    return () => unsubscribe();
+  }, []);
 
-  // Muestra un componente diferente basado en el rol del usuario
+  const handleLogout = () => {
+    signOut(auth).catch((error) => console.error("Error al cerrar sesión:", error));
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">Cargando...</div>;
+  }
+
   const renderDashboardByRole = () => {
-    switch (userRole) {
-      case 'administrador':
-        return <AdminDashboard />;
+    const props = { user: userData, handleLogout };
+
+    switch (userData?.rol) {
+      case 'admin':
+        return <AdminDashboard {...props} />;
       case 'profesor':
-        return <ProfesorDashboard />;
+        return <ProfesorDashboard {...props} />;
+      case 'alumno':
+        return <DefaultDashboard {...props} />;
       default:
-        return <DefaultDashboard />;
+        return (
+            <div className="text-center p-8">
+                <h1 className="text-2xl font-bold">Rol no reconocido o datos no encontrados</h1>
+                <p>No tienes un panel asignado o no pudimos cargar tus datos. Contacta al administrador.</p>
+                <button onClick={handleLogout} className="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-700">
+                    Cerrar Sesión
+                </button>
+            </div>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="flex items-center justify-between p-4 bg-white shadow-md">
-        <h1 className="text-2xl font-bold text-gray-800">Academia Virtual</h1>
-        <div className="flex items-center space-x-4">
-          <p className="text-sm text-gray-600">
-            <span className="font-semibold">{user.email}</span>
-            {userRole && <span className="px-2 py-1 ml-2 text-xs font-bold text-white bg-blue-500 rounded-full">{userRole.toUpperCase()}</span>}
-          </p>
-          <button
-            onClick={onLogout}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-          >
-            Cerrar Sesión
-          </button>
+    <div>
+      {userData ? renderDashboardByRole() : (
+        <div className="text-center p-8">
+            <h1 className="text-2xl font-bold">No estás logueado o tus datos no se encontraron.</h1>
+            <p>Por favor, intenta iniciar sesión de nuevo. Si el problema persiste, contacta al administrador.</p>
         </div>
-      </header>
-      <main className="p-8">
-        {loadingRole ? (
-          <p>Verificando permisos...</p>
-        ) : (
-          renderDashboardByRole()
-        )}
-      </main>
+      )}
     </div>
   );
-}
+};
 
 export default Dashboard;

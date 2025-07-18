@@ -8,7 +8,7 @@ import { getStorage } from "firebase/storage";
 
 // La configuración de tu proyecto de Firebase
 // ¡Ve a la consola de Firebase > Configuración del proyecto para obtener estos datos!
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyBpaEicEParLMKfBHFyaafY7lRBOxp4DZE",
   authDomain: "aula-virtual-b2ee1.firebaseapp.com",
   projectId: "aula-virtual-b2ee1",

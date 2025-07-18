@@ -1,54 +1,50 @@
-// src/App.jsx
-
-import React, { useState, useEffect } from 'react';
-import { auth } from './firebase'; // Importamos la configuración de auth
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { auth } from './firebase';
+import { useAuthState } from 'react-firebase-hooks/auth'; // Hook para facilitar el manejo de auth
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 
-function App() {
-  const [user, setUser] = useState(null); // Estado para guardar el usuario
-  const [loading, setLoading] = useState(true); // Estado para la pantalla de carga inicial
+// Componente para proteger rutas
+function PrivateRoute({ children }) {
+  const [user, loading] = useAuthState(auth);
 
-  // Este efecto se ejecuta una vez para comprobar el estado de la autenticación
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    // Limpia el observador cuando el componente se desmonta
-    return () => unsubscribe();
-  }, []);
-
-  // Función para cerrar sesión
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
-    }
-  };
-
-  // Muestra un mensaje de carga mientras se verifica el usuario
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-xl text-gray-700">Cargando aplicación...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <p className="text-xl text-gray-700 dark:text-gray-300">Verificando sesión...</p>
       </div>
     );
   }
 
+  return user ? children : <Navigate to="/" />;
+}
+
+function App() {
+  const [user, loading] = useAuthState(auth);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {user ? (
-        // Si hay un usuario, muestra el Dashboard
-        <Dashboard user={user} onLogout={handleLogout} />
-      ) : (
-        // Si no hay usuario, muestra la página de Login
-        <LoginPage />
-      )}
-    </div>
+    <ThemeProvider>
+      <Router>
+        <div className="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+          <Routes>
+            <Route 
+              path="/" 
+              element={user ? <Navigate to="/dashboard" /> : <LoginPage />} 
+            />
+            <Route 
+              path="/dashboard" 
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              } 
+            />
+          </Routes>
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }
 
