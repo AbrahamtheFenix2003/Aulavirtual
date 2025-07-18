@@ -15,6 +15,11 @@ const DefaultDashboard = ({ user, handleLogout }) => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loadingModal, setLoadingModal] = useState(false);
 
+  // --- INICIO DE LA MODIFICACIÓN: Lógica para el estado financiero ---
+  const estadoFinanciero = user?.estadoFinanciero || 'No definido';
+  const estaAlDia = estadoFinanciero === 'Al día';
+  // --- FIN DE LA MODIFICACIÓN ---
+
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -137,11 +142,19 @@ const DefaultDashboard = ({ user, handleLogout }) => {
           </div>
           
           <aside className="space-y-8">
+            {/* --- INICIO DE LA MODIFICACIÓN: Bloque de estado financiero dinámico --- */}
             <div className="bg-white p-6 rounded-xl shadow-md">
-              <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><DollarSign size={22} className="text-green-600"/> Estado Financiero</h3>
-              <p className="text-2xl font-bold text-green-600">Al día</p>
-              <button className="w-full mt-4 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700">Realizar un Pago</button>
+              <h3 className={`text-xl font-semibold mb-3 flex items-center gap-2 ${estaAlDia ? 'text-green-600' : 'text-red-600'}`}>
+                <DollarSign size={22}/> Estado Financiero
+              </h3>
+              <p className={`text-2xl font-bold ${estaAlDia ? 'text-green-600' : 'text-red-600'}`}>
+                {estadoFinanciero}
+              </p>
+              <button className={`w-full mt-4 text-white font-semibold py-2 px-4 rounded-lg ${estaAlDia ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                {estaAlDia ? 'Ver historial de pagos' : 'Realizar un Pago'}
+              </button>
             </div>
+            {/* --- FIN DE LA MODIFICACIÓN --- */}
             <div className="bg-white p-6 rounded-xl shadow-md">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Bell size={22} className="text-yellow-600"/> Notificaciones</h3>
               <ul className="space-y-3"><li className="text-gray-700">No tienes notificaciones nuevas.</li></ul>
